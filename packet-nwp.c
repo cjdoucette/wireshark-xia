@@ -112,7 +112,8 @@ map_types(guint8 type)
 	}
 }
 
-gchar *
+/* Convert an NWP header's hardware address to a string. */
+static gchar *
 tvb_nwphrdaddr_to_str(tvbuff_t *tvb, gint offset, int ad_len)
 {
 	if (ad_len == 0)
