@@ -23,7 +23,7 @@ The next few steps assume that the working directory is the top-level Wireshark 
 
 Next, the Wireshark-XIA files must be added to the Wireshark source. Copy the cloned Wireshark-XIA files (excluding the compressed archive file) into the epan/dissectors/ directory within the Wireshark source. 
 
-Two other files need to be updated to inform the compiler that we are adding dissectors. First, within the epan/dissectors/ directory, locate the file "Makefile.common" and edit it to include the following:
+Three other files need to be updated to inform the compiler that we are adding dissectors. First, within the epan/dissectors/ directory, locate the file "Makefile.common" and edit it to include the following:
 
 	* Insert entries for packet-nwp.c, packet-xip.c, and packet-xip-dag.c
 	  under the heading "DISSECTOR_SRC."
@@ -35,6 +35,13 @@ Secondly, edit the file "CMakeLists.txt" within the epan/ directory to include t
 
 	* Insert entries for packet-nwp.c, packet-xip.c, and packet-xip-dag.c
 	  under the heading "DISSECTOR_SRC."
+
+Thirdly, edit the file "etypes.h" within the epan/ directory to include the following:
+
+	* Insert entries for the XIP and NWP Ethertypes. The file is ordered
+	  numerically by the two-byte Ethertype, and each entry should be
+	  wrapped in the preprocessing directive "#ifndef". The Ethertypes for
+	  XIP and NWP are 0xC0DE and 0xC0DF, respectively.
 
 Once these steps have been taken, the source code can be configured and compiled with the following steps:
 

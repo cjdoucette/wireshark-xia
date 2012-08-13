@@ -52,8 +52,9 @@ typedef unsigned char 	u8;
 #define NWP_TYPE_NEIGH_LIST	0x02
 #define NWP_TYPE_MAX		0x03
 
+#ifndef ETHERTYPE_NWP
 #define ETHERTYPE_NWP		0xC0DF	   /* Neighborhood Watch Protocol */
-				        /* [NOT AN OFFICIALLY REGISTERED ID] */
+#endif				        /* [NOT AN OFFICIALLY REGISTERED ID] */
 
 /* Offsets of fields within a NWP header. */
 #define NWPH_VERS	0
@@ -143,7 +144,7 @@ process_neighs(proto_tree *list_tree, tvbuff_t *tvb, guint8 ha_len)
 		str_of_xid(&xid_str, (u8 *)byte_str);
 
 		proto_tree_add_string_format(list_tree, hf_nwp_neigh,
-		       tvb, offset, XID_LEN, xid_str, "%s", xid_str);
+		 tvb, offset, XID_LEN, xid_str, "%s", xid_str);
 
 		offset += XID_LEN;
 		ha_count = tvb_get_guint8(tvb, offset);
@@ -153,8 +154,7 @@ process_neighs(proto_tree *list_tree, tvbuff_t *tvb, guint8 ha_len)
 
 			ha = tvb_nwphrdaddr_to_str(tvb, offset, ha_len);
 			proto_tree_add_string_format(list_tree, hf_nwp_haddr,
-				    		     tvb, offset, ha_len, ha,
-					            "    %d: %s", j + 1, ha);
+			 tvb, offset, ha_len, ha, "    %d: %s", j + 1, ha);
 			offset += ha_len;
 		}
 	}
@@ -183,22 +183,22 @@ dissect_nwp_ann(tvbuff_t *tvb, packet_info *pinfo, proto_tree *nwp_tree,
 	ha = tvb_nwphrdaddr_to_str(tvb, NWPH_HWAD, ha_len);
 
 	proto_tree_add_string_format(nwp_tree, hf_nwp_haddr, tvb, NWPH_HWAD,
-			  	    ha_len, ha, "Hardware Address: %s", ha);
+	 ha_len, ha, "Hardware Address: %s", ha);
 
 	ti = proto_tree_add_item(nwp_tree, hf_nwp_hids, tvb,
-		    NWPH_HWAD + ha_len, -1, ENC_BIG_ENDIAN);
+	 NWPH_HWAD + ha_len, -1, ENC_BIG_ENDIAN);
 
 	hid_tree = proto_item_add_subtree(ti, ett_nwp_ann_hids);
 
 	for (i = 0; i < hid_count; i++) {
 
 		byte_str = tvb_get_string(tvb, NWPH_HWAD + ha_len + off,
-							       XID_LEN);
+		 XID_LEN);
+
 		str_of_xid(&xid_str, (u8 *)byte_str);
 
 		proto_tree_add_string_format(hid_tree, hf_nwp_hid, tvb,
-		      NWPH_HWAD + ha_len + off, XID_LEN, xid_str, "%s",
-							      xid_str);
+		 NWPH_HWAD + ha_len + off, XID_LEN, xid_str, "%s", xid_str);
 		off += XID_LEN;
 	}
 }
@@ -206,7 +206,7 @@ dissect_nwp_ann(tvbuff_t *tvb, packet_info *pinfo, proto_tree *nwp_tree,
 /* Dissector for NWP Neighbor List packets. */
 static void
 dissect_nwp_nl(tvbuff_t *tvb, packet_info *pinfo, proto_tree *nwp_tree,
-	       guint8 ha_len)
+	        guint8 ha_len)
 {
 	proto_tree *list_tree = NULL;
 	proto_item *ti = NULL;
@@ -214,7 +214,7 @@ dissect_nwp_nl(tvbuff_t *tvb, packet_info *pinfo, proto_tree *nwp_tree,
 	col_add_str(pinfo->cinfo, COL_INFO, "NWP Neighbor List");
 
 	ti = proto_tree_add_item(nwp_tree, hf_nwp_neigh_list,
-		 	 tvb, NWPH_NLST, -1, ENC_BIG_ENDIAN);
+	 tvb, NWPH_NLST, -1, ENC_BIG_ENDIAN);
 
 	list_tree = proto_item_add_subtree(ti, ett_nwp_neigh_list);
 
@@ -247,16 +247,16 @@ dissect_nwp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 
 		/* Add header fields to tree. */
 		proto_tree_add_item(nwp_tree, hf_nwp_version, tvb,
-				    NWPH_VERS, 1, ENC_BIG_ENDIAN);
+		 NWPH_VERS, 1, ENC_BIG_ENDIAN);
 
 		proto_tree_add_string(nwp_tree, hf_nwp_type, tvb,
-				    NWPH_TYPE, 1, type_str);
+		 NWPH_TYPE, 1, type_str);
 
 		proto_tree_add_item(nwp_tree, hf_nwp_hid_count, tvb,
-				    NWPH_HIDC, 1, ENC_BIG_ENDIAN);
+		 NWPH_HIDC, 1, ENC_BIG_ENDIAN);
 
 		proto_tree_add_item(nwp_tree, hf_nwp_haddr_len, tvb,
-				    NWPH_HLEN, 1, ENC_BIG_ENDIAN);
+		 NWPH_HLEN, 1, ENC_BIG_ENDIAN);
 
 		switch (type) {
 
@@ -348,4 +348,3 @@ proto_reg_handoff_nwp(void)
 	nwp_handle = new_create_dissector_handle(dissect_nwp, proto_nwp);
 	dissector_add_uint("ethertype", ETHERTYPE_NWP, nwp_handle);
 }
-

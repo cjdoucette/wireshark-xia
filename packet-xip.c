@@ -72,7 +72,7 @@ static gint ett_xip_sdag = -1;
 
 static dissector_handle_t udp_handle;
 
-void
+static void
 display_dag(proto_tree *tr, int hf, tvbuff_t *tvb, guint8 off, char *buf)
 {
 	guint8 i = 0;
@@ -132,26 +132,25 @@ dissect_xip(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 
 		/* Add header fields to tree. */
 		proto_tree_add_item(xip_tree, hf_xip_version, tvb,
-				    XIPH_VERS, 1, ENC_BIG_ENDIAN);
+		 XIPH_VERS, 1, ENC_BIG_ENDIAN);
 
 		proto_tree_add_item(xip_tree, hf_xip_next_hdr, tvb,
-				    XIPH_NXTH, 1, ENC_BIG_ENDIAN);
+		 XIPH_NXTH, 1, ENC_BIG_ENDIAN);
 
 		proto_tree_add_uint_format(xip_tree, hf_xip_payload_len,
- 		       				tvb, XIPH_PLEN, 2, plen,
-				      "Payload Length: %u bytes", plen);
+ 		 tvb, XIPH_PLEN, 2, plen, "Payload Length: %u bytes", plen);
 
 		proto_tree_add_item(xip_tree, hf_xip_hop_limit, tvb,
-				   	  XIPH_HOPL, 1, ENC_BIG_ENDIAN);
+		 XIPH_HOPL, 1, ENC_BIG_ENDIAN);
 
 		proto_tree_add_item(xip_tree, hf_xip_num_dst, tvb,
-				   	  XIPH_NDST, 1, ENC_BIG_ENDIAN);
+		 XIPH_NDST, 1, ENC_BIG_ENDIAN);
 
 		proto_tree_add_item(xip_tree, hf_xip_num_src, tvb,
-				    	  XIPH_NSRC, 1, ENC_BIG_ENDIAN);
+		 XIPH_NSRC, 1, ENC_BIG_ENDIAN);
 
 		proto_tree_add_item(xip_tree, hf_xip_last_node, tvb,
-				    	  XIPH_LSTN, 1, ENC_BIG_ENDIAN);
+		 XIPH_LSTN, 1, ENC_BIG_ENDIAN);
 
 		/* Construct Destination DAG subtree. */
 		ti = proto_tree_add_item(xip_tree, hf_xip_dst_dag,
@@ -160,26 +159,26 @@ dissect_xip(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 		dst_tree = proto_item_add_subtree(ti, ett_xip_ddag);
 
 		tvb_memcpy(tvb, (guint8 *)(&dst), XIPH_DSTD,
-						 NODE_SIZE * dst_nodes);
+		 NODE_SIZE * dst_nodes);
 
 		xia_ntop(&dst, dst_string, XIA_MAX_STRADDR_SIZE, 1);
 
 		display_dag(dst_tree, hf_xip_dst_dag_entry, tvb,
-						 XIPH_DSTD, dst_string);
+		 XIPH_DSTD, dst_string);
 
 		/* Construct Source DAG subtree. */
 		ti = proto_tree_add_item(xip_tree, hf_xip_src_dag, tvb,
-		     src_offset, src_nodes * NODE_SIZE, ENC_BIG_ENDIAN);
+		 src_offset, src_nodes * NODE_SIZE, ENC_BIG_ENDIAN);
 
 		src_tree = proto_item_add_subtree(ti, ett_xip_sdag);
 
 		tvb_memcpy(tvb, (guint8 *)(&src), src_offset,
-						NODE_SIZE * src_nodes);
+		 NODE_SIZE * src_nodes);
 
 		xia_ntop(&src, src_string, XIA_MAX_STRADDR_SIZE, 1);
 
 		display_dag(src_tree, hf_xip_src_dag_entry, tvb,
-						src_offset, src_string);
+		 src_offset, src_string);
 	}
 
 	next_tvb = tvb_new_subset(tvb, hlen, -1, -1);
@@ -266,4 +265,3 @@ proto_reg_handoff_xip(void)
 
 	udp_handle = find_dissector("udp");
 }
-
