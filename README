@@ -43,6 +43,10 @@ Thirdly, edit the file "etypes.h" within the epan/ directory to include the foll
 	  wrapped in the preprocessing directive "#ifndef". The Ethertypes for
 	  XIP and NWP are 0xC0DE and 0xC0DF, respectively.
 
+Finally, edit the file "packet-ethertype.c" within the epan/dissectors/ directory to include the following:
+
+	* Insert entries for the XIP and NWP Ethertypes in the etype_vals array.
+
 Once these steps have been taken, the source code can be configured and compiled with the following steps:
 
 	$ ./autogen.sh
