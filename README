@@ -1,5 +1,7 @@
 Cody Doucette
 Boston University
+eXpressive Internet Architecture
+http://www.cs.cmu.edu/~xia/
 
 This README will describe how to use the files included in this repository to build a Wireshark application that supports eXpressive Internet Protocol (XIP) and Neighborhood Watch Protocol (NWP) packet dissection within the eXpressive Internet Architecture (XIA).
 
@@ -57,4 +59,4 @@ Once the application has been built, it can be started from the command-line:
 
 	$ wireshark
 
-There are example packet captures in the examples/ directory of the Wireshark-XIA source.
+The examples directory contains example XIP and NWP packet captures. The samples directory contains samples of the files epan/CMakeLists.txt, epan/etypes.h, epan/dissectors/Makefile.common, and epan/dissectors/packet-ethertype.c.
