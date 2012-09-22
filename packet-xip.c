@@ -70,7 +70,7 @@ static gint ett_xip = -1;
 static gint ett_xip_ddag = -1;
 static gint ett_xip_sdag = -1;
 
-static dissector_handle_t udp_handle;
+static dissector_handle_t data_handle;
 
 static void
 display_dag(proto_tree *tr, int hf, tvbuff_t *tvb, guint8 off, char *buf)
@@ -108,6 +108,10 @@ dissect_xip(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 	guint8 src_offset = XIPH_DSTD + (NODE_SIZE * dst_nodes);
 	guint32 hlen = 8 + (NODE_SIZE * dst_nodes) + (NODE_SIZE * src_nodes);
 	guint16 plen = tvb_get_ntohs(tvb, XIPH_PLEN);
+	guint8 last_node = tvb_get_guint8(tvb, XIPH_LSTN);
+	gchar *format = "";
+	guint32 next_diss = tvb_get_ntohl(tvb,
+	 XIPH_DSTD + (dst_nodes - 1) * NODE_SIZE);
 
 	memset(&dst, 0, sizeof dst);
 	memset(&src, 0, sizeof src);
@@ -121,7 +125,7 @@ dissect_xip(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 	}
 
 	col_set_str(pinfo->cinfo, COL_PROTOCOL, "XIP");
-	col_set_str(pinfo->cinfo, COL_INFO, "XIP Request");
+	col_set_str(pinfo->cinfo, COL_INFO, "XIP Packet");
 
 	if (tree) {
 
@@ -149,8 +153,12 @@ dissect_xip(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 		proto_tree_add_item(xip_tree, hf_xip_num_src, tvb,
 		 XIPH_NSRC, 1, ENC_BIG_ENDIAN);
 
-		proto_tree_add_item(xip_tree, hf_xip_last_node, tvb,
-		 XIPH_LSTN, 1, ENC_BIG_ENDIAN);
+		if (last_node == XIA_ENTRY_NODE_INDEX)
+			format = "(entry node)";
+
+		proto_tree_add_uint_format(xip_tree, hf_xip_last_node, tvb,
+		 XIPH_LSTN, 1, last_node, "Last Node: %u %s", last_node,
+		 format);
 
 		/* Construct Destination DAG subtree. */
 		ti = proto_tree_add_item(xip_tree, hf_xip_dst_dag,
@@ -182,7 +190,8 @@ dissect_xip(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 	}
 
 	next_tvb = tvb_new_subset(tvb, hlen, -1, -1);
-	call_dissector(udp_handle, next_tvb, pinfo, tree);
+	if (next_diss == 0x12)
+		call_dissector(data_handle, next_tvb, pinfo, tree);
 
 	return tvb_length(tvb);
 }
@@ -190,7 +199,6 @@ dissect_xip(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 void
 proto_register_xip(void)
 {
-
 	static hf_register_info hf[] = {
 
 		{ &hf_xip_version,
@@ -199,8 +207,7 @@ proto_register_xip(void)
 
 		{ &hf_xip_next_hdr,
 		{ "Next Header", "xip.next_hdr", FT_UINT8,
-		   BASE_DEC|BASE_EXT_STRING, (&ipproto_val_ext),
-		   0x0, NULL, HFILL }},
+		   BASE_DEC, NULL, 0x0, NULL, HFILL }},
 
 		{ &hf_xip_payload_len,
 		{ "Payload Length", "xip.payload_len", FT_UINT16,
@@ -220,7 +227,7 @@ proto_register_xip(void)
 
 		{ &hf_xip_last_node,
 		{ "Last Node", "xip.last_node", FT_UINT8,
-		   BASE_DEC, NULL, 0x0,	NULL, HFILL }},
+		   BASE_DEC, NULL, 0x0, NULL, HFILL }},
 
 		{ &hf_xip_dst_dag,
 		{ "Destination DAG", "xip.dst_dag", FT_NONE,
@@ -253,7 +260,6 @@ proto_register_xip(void)
 
 	proto_register_field_array(proto_xip, hf, array_length(hf));
 	proto_register_subtree_array(ett, array_length(ett));
-
 }
 
 void
@@ -263,5 +269,5 @@ proto_reg_handoff_xip(void)
 	xip_handle = new_create_dissector_handle(dissect_xip, proto_xip);
 	dissector_add_uint("ethertype", ETHERTYPE_XIP, xip_handle);
 
-	udp_handle = find_dissector("udp");
+	data_handle = find_dissector("data");
 }

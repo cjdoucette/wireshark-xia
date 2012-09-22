@@ -23,11 +23,11 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+
 #include <asm/byteorder.h>
 #include <linux/kernel.h>
 #include "packet-xip-xia-fib.h"
 #include "packet-xip-dag.h"
-
 
 /*
  * IMPORTANT
@@ -318,8 +318,10 @@ int xia_test_addr(const struct xia_addr *addr)
 		 * friendlier error since it's also XIAEADDR_MULTI_COMPONENTS.
 		 */
 		__be32 all_edges = addr->s_row[n - 1].s_edge.i;
-		if (be32_to_raw_cpu(all_edges) == XIA_EMPTY_EDGES)
+		/* XXX: Commented out for Wireshark compaitibility.
+		if (__be32_to_raw_cpu(all_edges) == XIA_EMPTY_EDGES)
 			return -XIAEADDR_NO_ENTRY;
+		*/
 
 		if (visited != ((1U << n) - 1))
 			return -XIAEADDR_MULTI_COMPONENTS;
@@ -338,6 +340,7 @@ static inline char edge_to_char(__u8 e)
 {
 	char *ch_edge = "0123456789abcdefghijklmnopqrstuvwxyz";
 		/*       0123456789012345678901234567890123456789 */
+	e &= ~XIA_CHOSEN_EDGE;
 	if (likely(e < INDEX_BASE))
 		return ch_edge[e];
 	else if (is_empty_edge(e))
@@ -491,7 +494,7 @@ int xia_ntop(const struct xia_addr *src, char *dst, size_t dstlen,
 	for (i = 0; i < XIA_NODES_MAX; i++) {
 		const struct xia_row *row = &src->s_row[i];
 
-		if (valid && xia_is_nat(row->s_xid.xid_type))
+		if (xia_is_nat(row->s_xid.xid_type))
 			break;
 
 		if (i > 0) {
