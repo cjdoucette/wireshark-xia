@@ -23,7 +23,6 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-
 #include <asm/byteorder.h>
 #include <linux/kernel.h>
 #include "packet-xip-xia-fib.h"
