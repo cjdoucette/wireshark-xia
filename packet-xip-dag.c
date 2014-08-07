@@ -60,6 +60,10 @@ struct ppal_node {
 #ifdef __KERNEL__
 static DEFINE_SPINLOCK(map_lock);
 #endif
+
+/* Added for Wireshark. */
+#define __be32_to_raw_cpu(n)	((__force __u32)(n))
+
 static struct hlist_head ppal_head_per_name[PPAL_MAP_SIZE];
 static struct hlist_head ppal_head_per_type[PPAL_MAP_SIZE];
 
@@ -190,7 +194,7 @@ int ppal_add_map(const char *name, xid_type_t type)
 
 	/* Initialize new entry. */
 	rc = -ENOMEM;
-	map = mymalloc(sizeof(*map));
+	map = (struct ppal_node *)mymalloc(sizeof(*map));
 	if (!map)
 		goto out;
 	/* It is safe to call strcpy because we validated name before. */
@@ -317,10 +321,8 @@ int xia_test_addr(const struct xia_addr *addr)
 		 * friendlier error since it's also XIAEADDR_MULTI_COMPONENTS.
 		 */
 		__be32 all_edges = addr->s_row[n - 1].s_edge.i;
-		/* XXX: Commented out for Wireshark compaitibility.
 		if (__be32_to_raw_cpu(all_edges) == XIA_EMPTY_EDGES)
 			return -XIAEADDR_NO_ENTRY;
-		*/
 
 		if (visited != ((1U << n) - 1))
 			return -XIAEADDR_MULTI_COMPONENTS;
@@ -337,7 +339,7 @@ EXPORT_SYMBOL(xia_test_addr);
 #define INDEX_BASE 36
 static inline char edge_to_char(__u8 e)
 {
-	char *ch_edge = "0123456789abcdefghijklmnopqrstuvwxyz";
+	const char *ch_edge = "0123456789abcdefghijklmnopqrstuvwxyz";
 		/*       0123456789012345678901234567890123456789 */
 	e &= ~XIA_CHOSEN_EDGE;
 	if (likely(e < INDEX_BASE))
@@ -357,7 +359,7 @@ static inline int su_ge(signed int s, unsigned int u)
 	return (s >= 0) && ((unsigned int)s >= u);
 }
 
-static inline int add_str(char *dst, size_t dstlen, char *s)
+static inline int add_str(char *dst, size_t dstlen, const char *s)
 {
 	int rc = snprintf(dst, dstlen, "%s", s);
 	if (su_ge(rc, dstlen))
@@ -479,7 +481,7 @@ int xia_ntop(const struct xia_addr *src, char *dst, size_t dstlen,
 	int include_nl)
 {
 	int tot = 0;
-	char *node_sep = include_nl ? ":\n" : ":";
+	const char *node_sep = include_nl ? ":\n" : ":";
 	int valid = xia_test_addr(src) >= 1;
 	int rc, i;
 

@@ -36,7 +36,57 @@
 #else
 #define BUILD_BUG_ON(x)
 #define __force
+#include <epan/value_string.h>
+#include <string.h>
 #endif
+
+/* XIA Principal Types. */
+#define XIDTYPE_AD		0x10
+#define XIDTYPE_HID		0x11
+#define XIDTYPE_CID		0x12
+#define XIDTYPE_SID		0x13
+#define XIDTYPE_UNI4ID		0x14
+#define XIDTYPE_I4ID		0x15
+#define XIDTYPE_U4ID		0x16
+#define XIDTYPE_XDP		0x17
+#define XIDTYPE_SRVCID		0x18
+#define XIDTYPE_FLOWID		0x19
+#define XIDTYPE_ZF		0x20
+
+static const value_string xidtype_vals[] = {
+	{ XIDTYPE_AD,		"ad" },
+	{ XIDTYPE_HID,		"hid" },
+	{ XIDTYPE_CID,		"cid" },
+	{ XIDTYPE_SID,		"sid" },
+	{ XIDTYPE_UNI4ID,	"uni4id" },
+	{ XIDTYPE_I4ID,		"i4id" },
+	{ XIDTYPE_U4ID,		"u4id" },
+	{ XIDTYPE_XDP,		"xdp" },
+	{ XIDTYPE_SRVCID,	"serval" },
+	{ XIDTYPE_FLOWID,	"flowid" },
+	{ XIDTYPE_ZF,		"zf" },
+	{ 0,			NULL }
+};
+
+static void
+map_types(gchar *str, gchar *copy, guint32 type)
+{
+	gchar *start, *end;
+	const gchar *name = val_to_str(type, xidtype_vals, "%s");
+	int len, off = 0;
+	start = strchr(str, '-') + 1;
+	end = strchr(str, '\0');
+	len = end - start;
+
+	if (str[0] == '!') {
+		copy[0] = '!';
+		off = 1;
+	}
+
+	strncpy(copy + off, name, strlen(name));
+	strncpy(copy + off + strlen(name), "-", strlen("-"));
+	strncpy(copy + off + strlen(name) + strlen("-"), start, len);
+}
 
 /*
  * XIA address

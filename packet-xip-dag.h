@@ -64,32 +64,6 @@ extern int ppal_name_to_type(const char *name, xid_type_t *pty);
  */
 extern int ppal_type_to_name(xid_type_t type, char *name);
 
-/* ppal_add_map - Maps @name and @type.
- *
- * RETURN
- *	Zero for success, otherwise a negative number.
- *
- * NOTES
- *	In Kernel, ppal_add_map and ppal_del_map share a lock to make
- *	current changes safe.
- *	In userland, the caller must manage a lock.
- *	@name and @type must be unique.
- */
-extern int ppal_add_map(const char *name, xid_type_t type);
-
-/* ppal_del_map - Removes map for @type.
- *
- * RETURN
- *	Zero for success, otherwise a negative number.
- *
- * NOTES
- *	In Kernel, ppal_add_map and ppal_del_map share a lock to make
- *	current changes safe.
- *	In userland, the caller must manage a lock.
- *	Caller must have a lock that guarantees multual exclusion.
- */
-extern int ppal_del_map(xid_type_t type);
-
 enum xia_addr_error {
 	/* There's a non-XIDTYPE_NAT node after an XIDTYPE_NAT node. */
 	XIAEADDR_NAT_MISPLACED = 1,

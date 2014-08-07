@@ -32,18 +32,17 @@
 
 typedef unsigned char 	u8;
 
-#define XIDTYPE_HID 	(__cpu_to_be32(0x11))
 #define XID_LEN		20
 #define NWPH_MIN_LEN	36
 
 #define NWP_VERSION	0x01
-#define XID_TYPE_HID	0x11
+#define MONITORING	0
 
 /*
  * Note: To add a new NWP packet type, include:
  *
  * * A new type definition directive.
- * * A new entry in the map_types_name function.
+ * * A new entry in the map_type_name_nwp function.
  * * A dissect_nwp_<new_type> function.
  * * A new entry in dissect_nwp that calls the above function.
  *
@@ -58,6 +57,17 @@ typedef unsigned char 	u8;
 #define NWP_TYPE_INV_PING	0x07
 #define NWP_TYPE_MAX		0x08
 
+const value_string nwptype_vals[] = {
+	{ NWP_TYPE_ANNOUNCEMENT,	"NWP Announcement (0x01)" },
+	{ NWP_TYPE_NEIGH_LIST,		"NWP Neighborhood List (0x02)" },
+	{ NWP_TYPE_PING,		"NWP Ping (0x03)" },
+	{ NWP_TYPE_ACK,			"NWP Ack (0x04)" },
+	{ NWP_TYPE_REQ_PING,		"NWP Request Ping (0x05)" },
+	{ NWP_TYPE_REQ_ACK,		"NWP Request Ack (0x06)" },
+	{ NWP_TYPE_INV_PING,		"NWP Investigative Ping (0x07)" },
+	{ 0,				NULL }
+};
+
 #ifndef ETHERTYPE_NWP
 #define ETHERTYPE_NWP		0xC0DF	   /* Neighborhood Watch Protocol */
 #endif				        /* [NOT AN OFFICIALLY REGISTERED ID] */
@@ -69,8 +79,12 @@ typedef unsigned char 	u8;
 #define NWPH_HLEN	3
 
 #define NWPH_NLST	4
+#if MONITORING
 #define NWPH_ANN_STAT	4
 #define NWPH_HWAD	8
+#else
+#define NWPH_HWAD	4
+#endif
 
 /* Offsets of fields in NWP Monitoring packets. */
 #define NWPH_CLOK	4
@@ -110,105 +124,6 @@ static gint ett_nwp = -1;
 static gint ett_nwp_ann_hids = -1;
 static gint ett_nwp_neigh_list = -1;
 
-#define XID_TYPE_AD	0x10
-#define XID_TYPE_HID	0x11
-#define XID_TYPE_CID	0x12
-#define XID_TYPE_SID	0x13
-#define XID_TYPE_UNITED_4ID	0x14
-#define XID_TYPE_4ID	0x15
-#define XID_TYPE_U4ID	0x16
-#define XID_TYPE_XDP	0x17
-#define XID_TYPE_SERVAL	0x18
-#define XID_TYPE_FLOWID	0x19
-
-/* Map a type number to a type string for display. */
-static gchar *
-map_types_name(guint8 type)
-{
-	switch (type) {
-	case NWP_TYPE_ANNOUNCEMENT:
-		return "NWP Announcement (0x01)";
-	case NWP_TYPE_NEIGH_LIST:
-		return "NWP Neighborhood List (0x02)";
-	case NWP_TYPE_PING:
-		return "NWP Ping (0x03)";
-	case NWP_TYPE_ACK:
-		return "NWP Ack (0x04)";
-	case NWP_TYPE_REQ_PING:
-		return "NWP Request Ping (0x05)";
-	case NWP_TYPE_REQ_ACK:
-		return "NWP Request Ack (0x06)";
-	case NWP_TYPE_INV_PING:
-		return "NWP Investigative Ping (0x07)";
-	default:
-		return "Invalid NWP packet type";
-	}
-}
-
-static gchar *
-type_to_name(guint32 type)
-{
-	gchar *name;
-
-	switch (type) {
-	case XID_TYPE_AD:
-		name = "ad";
-		break;
-	case XID_TYPE_HID:
-		name = "hid";
-		break;
-	case XID_TYPE_CID:
-		name = "cid";
-		break;
-	case XID_TYPE_SID:
-		name = "sid";
-		break;
-	case XID_TYPE_UNITED_4ID:
-		name = "united4id";
-		break;
-	case XID_TYPE_4ID:
-		name = "4id";
-		break;
-	case XID_TYPE_U4ID:
-		name = "u4id";
-		break;
-	case XID_TYPE_XDP:
-		name = "xdp";
-		break;
-	case XID_TYPE_SERVAL:
-		name = "serval";
-		break;
-	case XID_TYPE_FLOWID:
-		name = "flowid";
-		break;
-	default:
-		name = "nat";
-		break;
-	}
-
-	return name;
-}
-
-
-static void
-map_types(char *str, char *copy, guint32 type)
-{
-	char *start, *end, *name = type_to_name(type);
-	int len, off = 0;
-	start = strchr(str, '-') + 1;
-	end = strchr(str, '\0');
-	len = end - start;
-
-	if (str[0] == '!') {
-		copy[0] = '!';
-		off = 1;
-	}
-	strncpy(copy + off, name, strlen(name));
-	strncpy(copy + off + strlen(name), "-", strlen("-"));
-	strncpy(copy + off + strlen(name) + strlen("-"), start, len);
-	copy[off + strlen(name) + strlen("-") + len] = '\0';
-}
-
 static inline gboolean
 is_monitoring(guint8 type)
 {
@@ -224,7 +139,7 @@ static void
 str_of_xid(gchar **dest_str, u8 *id)
 {
 	struct xia_xid xid;
-	*dest_str = malloc(XIA_MAX_STRXID_SIZE + 1);
+	*dest_str = (gchar *)malloc(XIA_MAX_STRXID_SIZE + 1);
 	xid.xid_type = XIDTYPE_HID;
 	memcpy(xid.xid_id, id, XIA_XID_MAX);
 	xia_xidtop(&xid, (gchar *)*dest_str, XIA_MAX_STRXID_SIZE);
@@ -235,9 +150,9 @@ static inline gchar *
 tvb_nwphrdaddr_to_str(tvbuff_t *tvb, gint offset, int ad_len)
 {
 	if (ad_len == 0)
-		return "<No address>";
+		return (gchar *)"<No address>";
 	if (ad_len == 6)
-		return tvb_ether_to_str(tvb, offset);
+		return (gchar *)tvb_ether_to_str(tvb, offset);
 
 	return tvb_bytes_to_str(tvb, offset, ad_len);
 }
@@ -252,15 +167,15 @@ process_neighs(proto_tree *list_tree, tvbuff_t *tvb, guint8 ha_len)
 
 	offset = NWPH_NLST;
 	hid_count = tvb_get_guint8(tvb, NWPH_HIDC);
-	ha = malloc(2*ha_len + 1);
+	ha = (gchar *)malloc(2*ha_len + 1);
 
 	for (i = 0; i < hid_count; i++) {
 
-		byte_str = malloc(2 * XID_LEN + 1);
+		byte_str = (gchar *)malloc(2 * XID_LEN + 1);
 		byte_str = tvb_get_string(tvb, offset, XID_LEN);
 		str_of_xid(&xid_str, (u8 *)byte_str);
-		copy = calloc(strlen(xid_str) + strlen("hid") - 4, 1);
-		map_types(xid_str, copy, XID_TYPE_HID);
+		copy = (gchar *)calloc(strlen(xid_str) + strlen("hid") - 4, 1);
+		map_types(xid_str, copy, XIDTYPE_HID);
 
 		proto_tree_add_string_format(list_tree, hf_nwp_neigh,
 		 tvb, offset, XID_LEN, copy, "HID %d: %s", i + 1, copy);
@@ -282,15 +197,16 @@ process_neighs(proto_tree *list_tree, tvbuff_t *tvb, guint8 ha_len)
 			proto_tree_add_string_format(list_tree, hf_nwp_haddr,
 			 tvb, offset, ha_len, ha,
 			 "  %d: Hardware Address: %s", j + 1, ha);
-
+#if MONITORING
 			proto_tree_add_string_format(list_tree, hf_nwp_status,
-			 tvb, offset + ha_len, 4, &status,
+			 tvb, offset + ha_len, 4, (char *)&status,
 			 "     Status: %s", (0x80000000 & status) ? "Alive"
 								 : "Failed");
 			proto_tree_add_string_format(list_tree,
-			 hf_nwp_ann_clock, tvb, offset + ha_len, 4, &status,
+			 hf_nwp_ann_clock, tvb, offset + ha_len, 4,
+			 (gchar *)&status,
 			 "     Clock: 0x%x", 0x7FFFFFFF & status);
-
+#endif
 			offset += ha_len + 4;
 		}
 
@@ -317,6 +233,8 @@ dissect_nwp_ann(tvbuff_t *tvb, proto_tree *nwp_tree, guint8 ha_len)
 
 	hid_count = tvb_get_guint8(tvb, NWPH_HIDC);
 	ha = tvb_nwphrdaddr_to_str(tvb, NWPH_HWAD, ha_len);
+
+#if MONITORING
 	status = tvb_get_ntohl(tvb, NWPH_ANN_STAT);
 
 	proto_tree_add_string_format(nwp_tree, hf_nwp_status, tvb,
@@ -325,6 +243,7 @@ dissect_nwp_ann(tvbuff_t *tvb, proto_tree *nwp_tree, guint8 ha_len)
 
 	proto_tree_add_string_format(nwp_tree, hf_nwp_ann_clock, tvb,
 	 NWPH_ANN_STAT, 4, (gchar *)&status, "Clock: 0x%x", 0x7FFFFFFF& status);
+#endif
 
 	proto_tree_add_string_format(nwp_tree, hf_nwp_haddr, tvb, NWPH_HWAD,
 	 ha_len, ha, "Hardware Address: %s", ha);
@@ -334,22 +253,30 @@ dissect_nwp_ann(tvbuff_t *tvb, proto_tree *nwp_tree, guint8 ha_len)
 
 	hid_tree = proto_item_add_subtree(ti, ett_nwp_ann_hids);
 
+	printf("hid_count: %d\n", hid_count);
+
 	for (i = 0; i < hid_count; i++) {
 
-		byte_str = malloc(2 * XID_LEN + 1);
+		printf("%d\n", 1);
+		printf("%d\n", 2);
+		printf("offset: %d\n", NWPH_HWAD + ha_len + off);
 		byte_str = tvb_get_string(tvb, NWPH_HWAD + ha_len + off,
 		 XID_LEN);
+		printf("%d\n", 3);
 		str_of_xid(&xid_str, (u8 *)byte_str);
-		copy = calloc(strlen(xid_str) + strlen("hid") - 4, 1);
-		map_types(xid_str, copy, XID_TYPE_HID);
+		printf("%d\n", 4);
+		copy = (gchar *)calloc(strlen(xid_str) + strlen("hid") - 4, 1);
+		printf("%d\n", 5);
+		map_types(xid_str, copy, XIDTYPE_HID);
+		printf("%d\n", 6);
 
 		proto_tree_add_string_format(hid_tree, hf_nwp_hid, tvb,
 		 NWPH_HWAD + ha_len + off, XID_LEN, copy, "%s", copy);
 		off += XID_LEN;
 
+		printf("%d\n", 7);
 		free(copy);
 		free(xid_str);
-		free(byte_str);
 	}
 }
 
@@ -398,23 +325,22 @@ dissect_nwp_monitoring(tvbuff_t *tvb, proto_tree *nwp_tree, guint8 ha_len,
 }
 
 static int
-dissect_nwp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
+dissect_nwp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
+	__attribute__((unused))void *data)
 {
 	proto_tree *nwp_tree = NULL;
 	proto_item *ti = NULL;
 
-	guint8 type 	= tvb_get_guint8(tvb, NWPH_TYPE);
-	gchar *type_str = map_types_name(type);
-	guint8 ha_len 	= tvb_get_guint8(tvb, NWPH_HLEN);
+	guint8 type = tvb_get_guint8(tvb, NWPH_TYPE);
+	const gchar *type_str = val_to_str(type, nwptype_vals, "%s");
+	guint8 ha_len = tvb_get_guint8(tvb, NWPH_HLEN);
 
 	col_set_str(pinfo->cinfo, COL_PROTOCOL, "NWP");
 	col_add_str(pinfo->cinfo, COL_INFO, type_str);
 
 	if (tree) {
-
 		/* Construct protocol tree. */
 		ti = proto_tree_add_item(tree, proto_nwp, tvb, 0, -1, ENC_NA);
-
 		nwp_tree = proto_item_add_subtree(ti, ett_nwp);
 
 		/* Add header fields to tree. */
@@ -424,12 +350,14 @@ dissect_nwp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 		proto_tree_add_string(nwp_tree, hf_nwp_type, tvb,
 		 NWPH_TYPE, 1, type_str);
 
+#if MONITORING
 		if (is_monitoring(type)) {
 			proto_tree_add_item(nwp_tree, hf_nwp_haddr_len, tvb,
 		 	 NWPH_HLEN, 1, ENC_BIG_ENDIAN);
 			dissect_nwp_monitoring(tvb, nwp_tree, ha_len, type);
 			return tvb_length(tvb);
 		}
+#endif
 
 		proto_tree_add_item(nwp_tree, hf_nwp_hid_count, tvb,
 		 NWPH_HIDC, 1, ENC_BIG_ENDIAN);
@@ -438,17 +366,12 @@ dissect_nwp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 		 NWPH_HLEN, 1, ENC_BIG_ENDIAN);
 
 		switch (type) {
-
 		case NWP_TYPE_ANNOUNCEMENT:
-
 			dissect_nwp_ann(tvb, nwp_tree, ha_len);
 			break;
-
 		case NWP_TYPE_NEIGH_LIST:
-
 			dissect_nwp_nl(tvb, nwp_tree, ha_len);
 			break;
-
 		default:
 			break;
 		}
