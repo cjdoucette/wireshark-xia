@@ -253,28 +253,18 @@ dissect_nwp_ann(tvbuff_t *tvb, proto_tree *nwp_tree, guint8 ha_len)
 
 	hid_tree = proto_item_add_subtree(ti, ett_nwp_ann_hids);
 
-	printf("hid_count: %d\n", hid_count);
-
 	for (i = 0; i < hid_count; i++) {
 
-		printf("%d\n", 1);
-		printf("%d\n", 2);
-		printf("offset: %d\n", NWPH_HWAD + ha_len + off);
 		byte_str = tvb_get_string(tvb, NWPH_HWAD + ha_len + off,
 		 XID_LEN);
-		printf("%d\n", 3);
 		str_of_xid(&xid_str, (u8 *)byte_str);
-		printf("%d\n", 4);
 		copy = (gchar *)calloc(strlen(xid_str) + strlen("hid") - 4, 1);
-		printf("%d\n", 5);
 		map_types(xid_str, copy, XIDTYPE_HID);
-		printf("%d\n", 6);
 
 		proto_tree_add_string_format(hid_tree, hf_nwp_hid, tvb,
 		 NWPH_HWAD + ha_len + off, XID_LEN, copy, "%s", copy);
 		off += XID_LEN;
 
-		printf("%d\n", 7);
 		free(copy);
 		free(xid_str);
 	}
