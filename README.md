@@ -42,7 +42,7 @@ Once these steps have been taken, the source code can be configured and compiled
 
 	$ ./autogen.sh
 	$ ./configure
-	$ make
+	$ sudo make install
 
 Once the application has been built, it can be started from the command-line:
 
