@@ -206,8 +206,11 @@ process_neighs(proto_tree *list_tree, tvbuff_t *tvb, guint8 ha_len)
 			 hf_nwp_ann_clock, tvb, offset + ha_len, 4,
 			 (gchar *)&status,
 			 "     Clock: 0x%x", 0x7FFFFFFF & status);
-#endif
+
 			offset += ha_len + 4;
+#endif
+
+			offset += ha_len;
 		}
 
 
